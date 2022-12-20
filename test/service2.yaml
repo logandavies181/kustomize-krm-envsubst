@@ -1,0 +1,22 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: the-service2
+spec:
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 8666
+    targetPort: "${PORT}"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: the-other-service2
+spec:
+  type: LoadBalancer
+  ports:
+  - protocol: "${PROTONAME}"
+    port: 8666
+    targetPort: "${PORT2:-5012}"
