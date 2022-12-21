@@ -1,4 +1,4 @@
-module kustomize-krm-envsubst
+module github.com/logandavies181/kustomize-krm-envsubst
 
 go 1.19
 
