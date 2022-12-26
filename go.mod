@@ -3,7 +3,7 @@ module github.com/logandavies181/kustomize-krm-envsubst
 go 1.19
 
 require (
-	github.com/drone/envsubst v1.0.3
+	github.com/logandavies181/envsubst v0.1.0-alpha
 	sigs.k8s.io/kustomize/kyaml v0.13.10
 )
 

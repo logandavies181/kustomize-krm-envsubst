@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/drone/envsubst"
+	"github.com/logandavies181/envsubst"
+
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
+
+func envMapping(str string, nodeInfo envsubst.NodeInfo) (string, bool) {
+	if str == "FOO" {
+		return nodeInfo.Orig(), false
+	}
+
+	return "", true
+}
 
 func walkSequenceNode(in *yaml.RNode) error {
 	_, err := filter(in)
@@ -54,9 +63,9 @@ func filter(in *yaml.RNode) (*yaml.RNode, error) {
 			return nil, fmt.Errorf("Could not parse node into string: %v", err)
 		}
 
-		substed, err := envsubst.EvalEnv(str)
+		substed, err := envsubst.EvalAdvanced(str, envsubst.AdvancedMapping(envMapping))
 		if err != nil {
-			return nil, fmt.Errorf("Could not envsubt: %v", err)
+			return nil, fmt.Errorf("Could not envsubst: %v", err)
 		}
 
 		if substed == str {
@@ -87,7 +96,7 @@ func main() {
 		for i := range items {
 			err := items[i].PipeE(yaml.FilterFunc(filter))
 			if err != nil {
-				return nil, fmt.Errorf("kustomize-krm-envsubt: %v", err)
+				return nil, fmt.Errorf("kustomize-krm-envsubst: %v", err)
 			}
 		}
 		return items, nil
