@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/logandavies181/envsubst"
+	"github.com/logandavies181/go-buildversion"
 
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
@@ -12,12 +14,14 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
+var version string // goreleaser will set this
+
 type Config struct {
 	envMapping envsubst.AdvancedMapping
 
 	AllowEmpty   bool     `yaml:"allowEmpty" json:"allowEmpty"`
-	ExcludedVars []string `yaml:"excludedVars" json:"excludedVars"`
-	IncludedVars []string `yaml:"includedVars" json:"includedVars"`
+	ExcludedVars []string `yaml:"excludedVariableNames" json:"excludedVariableNames"`
+	IncludedVars []string `yaml:"includedVariableNames" json:"includedVariableNames"`
 }
 
 func isEmpty(str string) bool {
@@ -66,13 +70,13 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 	case yaml.MappingNode:
 		err := in.VisitFields(c.walkMapNode)
 		if err != nil {
-			return nil, fmt.Errorf("Could not visit fields: %v", err)
+			return nil, err
 		}
 		return in, nil
 	case yaml.SequenceNode:
 		err := in.VisitElements(c.walkSequenceNode)
 		if err != nil {
-			return nil, fmt.Errorf("Could not visit elements: %v", err)
+			return nil, err
 		}
 
 		return in, nil
@@ -94,8 +98,8 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 		if isEmpty(substed) {
 			if !c.AllowEmpty {
 				return nil, fmt.Errorf(
-					"Value %s evaluated to empty string. Did you forget to set an environment variable?",
-					str)
+					"Value `%s` evaluated to empty string. Did you forget to set an environment variable?",
+					strings.TrimSuffix(str, "\n"))
 			}
 
 			substed = `""`
@@ -124,8 +128,34 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 
 func main() {
 	config := new(Config)
+
+	// This is a hack, but legacy exec plugins get config from the first arg.
+	// The framework is going to do its own thing here, but let's try read the first arg
+	// and parse it if it exists and is a file
+	if len(os.Args) > 1 {
+		fname := os.Args[1]
+		fdata, err := os.ReadFile(fname)
+		if err == nil {
+			var c Config
+			err = yaml.Unmarshal(fdata, &c)
+			if err == nil {
+				config.AllowEmpty = c.AllowEmpty
+				config.IncludedVars = c.IncludedVars
+				config.ExcludedVars = c.ExcludedVars
+			}
+		}
+	}
+
+	for _, arg := range os.Args {
+		fmt.Fprintln(os.Stderr, arg)
+	}
+
 	fn := func(items []*yaml.RNode) ([]*yaml.RNode, error) {
 		config.envMapping = func(str string, nodeInfo envsubst.NodeInfo) (string, bool) {
+			// IncludedVars and ExcludedVars are mutually exclusive
+			// IncludedVars takes precedent
+			// TODO: readme
+
 			if len(config.IncludedVars) == 0 {
 				if contains(config.ExcludedVars, str) {
 					return nodeInfo.Orig(), false
@@ -152,7 +182,9 @@ func main() {
 	}
 	p := framework.SimpleProcessor{Config: config, Filter: kio.FilterFunc(fn)}
 	cmd := command.Build(p, command.StandaloneDisabled, false)
-	command.AddGenerateDockerfile(cmd)
+	version, _ := buildversion.BuildVersionShortE(version)
+	cmd.Version = version
+
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}
