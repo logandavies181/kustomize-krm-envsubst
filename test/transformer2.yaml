@@ -1,0 +1,6 @@
+apiVersion: logantest.com/envsubst
+kind: EnvSubst
+metadata:
+  name: notImportantHere
+includedVariableNames:
+  - "PORT"
