@@ -146,10 +146,6 @@ func main() {
 		}
 	}
 
-	for _, arg := range os.Args {
-		fmt.Fprintln(os.Stderr, arg)
-	}
-
 	fn := func(items []*yaml.RNode) ([]*yaml.RNode, error) {
 		config.envMapping = func(str string, nodeInfo envsubst.NodeInfo) (string, bool) {
 			// IncludedVars and ExcludedVars are mutually exclusive
