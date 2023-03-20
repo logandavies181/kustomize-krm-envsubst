@@ -1,5 +1,4 @@
 resources:
-  #- service.yaml
-- service2.yaml
+- test.yaml
 transformers:
 - transformer.yaml
