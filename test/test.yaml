@@ -1,0 +1,63 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: the-service
+spec:
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 8666
+    targetPort: "${PORT}"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: the-other-service
+spec:
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 8666
+    targetPort: "${PORT2:-5000}"
+  - protocol: TCP
+    port: 8667
+    targetPort: "${PORT2:-5001}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  annotations:
+    someString: "${NAME:-defaultname}"
+    someStringNumber: "1"
+    someStringNumberVar: "${PORT2:-5000}"
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      annotations:
+        someString: "${NAME:-defaultname}"
+        someStringNumber: "1"
+        someStringNumberVar: "${PORT2:-5000}"
+        someStringNumberVarWithLeadingSpace: " ${PORT2:-5000}"
+        someMultiLineString: |
+          foo
+          bar
+        someMultiLineStringvar: |
+          foo
+          ${NAME:-defaultname}
+          bar
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80

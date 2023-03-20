@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/logandavies181/envsubst"
@@ -53,12 +54,70 @@ func (c Config) walkSequenceNode(in *yaml.RNode) error {
 }
 
 func (c Config) walkMapNode(in *yaml.MapNode) error {
+	if key, err := in.Key.String(); err == nil {
+		if key == "annotations\n" || key == "labels\n" {
+			return in.Value.VisitFields(c.walkMetadataNode)
+		}
+	} else {
+		return err
+	}
+
 	_, err := c.Filter(in.Value)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// walkMetadataNode is the same as Filter for a scalar node,
+// except that it ensures the value is always treated as a string
+func (c Config) walkMetadataNode(in *yaml.MapNode) error {
+	return c.processScalarNode(in.Value, true)
+}
+
+func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) error {
+	str, err := in.String()
+	if err != nil {
+		return fmt.Errorf("Could not parse node into string: %v", err)
+	}
+
+	substed, err := envsubst.EvalAdvanced(str, envsubst.AdvancedMapping(c.envMapping))
+	if err != nil {
+		return fmt.Errorf("Could not envsubst: %v", err)
+	}
+
+	if substed == str {
+		return nil
+	}
+
+	if isEmpty(substed) {
+		if !c.AllowEmpty {
+			return fmt.Errorf(
+				"Value `%s` evaluated to empty string. Did you forget to set an environment variable?",
+				strings.TrimSuffix(str, "\n"))
+		}
+
+		substed = `""`
+	}
+
+	if alwaysString {
+		substed = strings.TrimSuffix(substed, "\n")
+		if _, strconvErr := strconv.Atoi(string(substed[0])); strconvErr == nil {
+			substed = `"` + substed + `"`
+		}
+	}
+
+	strNode, err := yaml.Parse(substed)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, substed)
+		fmt.Fprintln(os.Stderr, len(substed))
+		return fmt.Errorf("Could not parse node after envsubsting: %v", err)
+	}
+
+	_, err = in.Pipe(yaml.Set(strNode))
+
+	return err
 }
 
 func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
@@ -81,44 +140,7 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 
 		return in, nil
 	case yaml.ScalarNode:
-		str, err := in.String()
-		if err != nil {
-			return nil, fmt.Errorf("Could not parse node into string: %v", err)
-		}
-
-		substed, err := envsubst.EvalAdvanced(str, envsubst.AdvancedMapping(c.envMapping))
-		if err != nil {
-			return nil, fmt.Errorf("Could not envsubst: %v", err)
-		}
-
-		if substed == str {
-			return in, nil
-		}
-
-		if isEmpty(substed) {
-			if !c.AllowEmpty {
-				return nil, fmt.Errorf(
-					"Value `%s` evaluated to empty string. Did you forget to set an environment variable?",
-					strings.TrimSuffix(str, "\n"))
-			}
-
-			substed = `""`
-		}
-
-		strNode, err := yaml.Parse(substed)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, substed)
-			fmt.Fprintln(os.Stderr, len(substed))
-			return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
-		}
-
-		out, err := in.Pipe(yaml.Set(strNode))
-		if err != nil {
-			return nil, err
-		}
-
-		return out, nil
-
+		return nil, c.processScalarNode(in, false)
 	case yaml.AliasNode, yaml.DocumentNode:
 		fallthrough
 	default:
