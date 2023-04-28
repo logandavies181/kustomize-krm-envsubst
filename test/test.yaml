@@ -4,25 +4,25 @@ apiVersion: v1
 metadata:
   name: the-service
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - protocol: TCP
     port: 8666
-    targetPort: "${PORT}"
+    targetPort: ${PORT}
 ---
 kind: Service
 apiVersion: v1
 metadata:
   name: the-other-service
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - protocol: TCP
     port: 8666
-    targetPort: "${PORT2:-5000}"
+    targetPort: ${PORT2:-5000}
   - protocol: TCP
     port: 8667
-    targetPort: "${PORT2:-5001}"
+    targetPort: ${PORT2:-5001}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -57,7 +57,14 @@ spec:
         app: nginx
     spec:
       containers:
-      - name: nginx
+      - env:
+        - name: OTHER_WORKERS
+          # Verify quoted default means the default outputs a string
+          value: ${OTHER_WORKERS:-"10"}
+        - name: WORKERS
+          # Verify quoted default means this will output a string
+          value: ${WORKERS:-"10"}
         image: nginx:1.14.2
+        name: nginx
         ports:
-        - containerPort: 80
+        - containerPort: ${PORT2:-5002}
