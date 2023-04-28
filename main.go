@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/logandavies181/envsubst"
@@ -54,15 +53,15 @@ func (c Config) walkSequenceNode(in *yaml.RNode) error {
 }
 
 func (c Config) walkMapNode(in *yaml.MapNode) error {
-	if key, err := in.Key.String(); err == nil {
-		if key == "annotations\n" || key == "labels\n" {
-			return in.Value.VisitFields(c.walkMetadataNode)
-		}
-	} else {
+	key, err := in.Key.String()
+	if err != nil {
 		return err
 	}
+	if key == "annotations\n" || key == "labels\n" {
+		return in.Value.VisitFields(c.walkMetadataNode)
+	}
 
-	_, err := c.Filter(in.Value)
+	_, err = c.Filter(in.Value)
 	if err != nil {
 		return err
 	}
@@ -101,21 +100,23 @@ func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) error {
 		substed = `""`
 	}
 
+	substed = strings.TrimSuffix(substed, "\n")
+
 	if alwaysString {
-		substed = strings.TrimSuffix(substed, "\n")
-		if _, strconvErr := strconv.Atoi(string(substed[0])); strconvErr == nil {
+		if yaml.IsIdxNumber(substed) {
 			substed = `"` + substed + `"`
 		}
 	}
-
-	strNode, err := yaml.Parse(substed)
+	node, err := yaml.Parse(substed)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, substed)
-		fmt.Fprintln(os.Stderr, len(substed))
 		return fmt.Errorf("Could not parse node after envsubsting: %v", err)
 	}
 
-	_, err = in.Pipe(yaml.Set(strNode))
+	if node.YNode().Kind != yaml.ScalarNode {
+		return fmt.Errorf("Invalid output: `%s` did not evaluate to a scalar", str)
+	}
+
+	_, err = in.Pipe(yaml.Set(node))
 
 	return err
 }
@@ -148,6 +149,30 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 	}
 }
 
+// environmentSubstitute performs an environment substitution. It
+// also inspects the args to infer if the value is intended to be
+// a string that represents an integer. If so, it will wrap it in
+// quotes
+func environmentSubstitute(s string, nodeInfo envsubst.NodeInfo) string {
+	looksLikeQuotedInt := false
+	for _, arg := range nodeInfo.Args() {
+		if len(arg) > 2 && arg[0] == byte('"') && arg[0] == arg[len(arg)-1] {
+			looksLikeQuotedInt = yaml.IsIdxNumber(arg[1 : len(arg)-1])
+		}
+	}
+
+	mapped := os.Getenv(s)
+	ret := nodeInfo.Result(mapped)
+
+	// check if args look like quoted integers
+	// AND ( if the function has triggered OR the function had no effect )
+	if looksLikeQuotedInt && (!contains(nodeInfo.Args(), ret) || ret == mapped) {
+		ret = fmt.Sprintf(`"%s"`, ret)
+	}
+
+	return ret
+}
+
 func main() {
 	config := new(Config)
 
@@ -169,24 +194,24 @@ func main() {
 	}
 
 	fn := func(items []*yaml.RNode) ([]*yaml.RNode, error) {
-		config.envMapping = func(str string, nodeInfo envsubst.NodeInfo) (string, bool) {
+		config.envMapping = func(s string, nodeInfo envsubst.NodeInfo) (string, bool) {
 			// IncludedVars and ExcludedVars are mutually exclusive
 			// IncludedVars takes precedent
 			// TODO: readme
 
 			if len(config.IncludedVars) == 0 {
-				if contains(config.ExcludedVars, str) {
+				if contains(config.ExcludedVars, s) {
 					return nodeInfo.Orig(), false
 				}
 
-				return str, true
+				return environmentSubstitute(s, nodeInfo), false
 			}
 
-			if !contains(config.IncludedVars, str) {
+			if !contains(config.IncludedVars, s) {
 				return nodeInfo.Orig(), false
 			}
 
-			return str, true
+			return environmentSubstitute(s, nodeInfo), false
 		}
 
 		for i := range items {

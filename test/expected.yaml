@@ -10,7 +10,7 @@ spec:
   - port: 8667
     protocol: TCP
     targetPort: 5001
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -21,7 +21,7 @@ spec:
   - port: 8666
     protocol: TCP
     targetPort: 58008
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,7 +56,12 @@ spec:
         app: nginx
     spec:
       containers:
-      - image: nginx:1.14.2
+      - env:
+        - name: OTHER_WORKERS
+          value: "10"
+        - name: WORKERS
+          value: "96"
+        image: nginx:1.14.2
         name: nginx
         ports:
-        - containerPort: 80
+        - containerPort: 5002
