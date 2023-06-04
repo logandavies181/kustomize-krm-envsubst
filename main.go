@@ -135,7 +135,6 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 	}
 
 	if len(in.FieldPath()) == 0 {
-		//groupVersion := strings.Split(in.GetApiVersion(), "/")
 		in.AppendToFieldPath(in.GetApiVersion())
 		in.AppendToFieldPath(in.GetKind())
 	}
