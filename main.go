@@ -44,6 +44,8 @@ func contains(list []string, str string) bool {
 }
 
 func (c Config) walkSequenceNode(in *yaml.RNode) error {
+	in.AppendToFieldPath("[]")
+
 	_, err := c.Filter(in)
 	if err != nil {
 		return err
@@ -57,6 +59,7 @@ func (c Config) walkMapNode(in *yaml.MapNode) error {
 	if err != nil {
 		return err
 	}
+	in.Value.AppendToFieldPath(strings.TrimSuffix(key, "\n"))
 	if key == "annotations\n" || key == "labels\n" {
 		return in.Value.VisitFields(c.walkMetadataNode)
 	}
@@ -72,27 +75,28 @@ func (c Config) walkMapNode(in *yaml.MapNode) error {
 // walkMetadataNode is the same as Filter for a scalar node,
 // except that it ensures the value is always treated as a string
 func (c Config) walkMetadataNode(in *yaml.MapNode) error {
-	return c.processScalarNode(in.Value, true)
+	_, err :=  c.processScalarNode(in.Value, true)
+	return err
 }
 
-func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) error {
+func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) (*yaml.RNode, error) {
 	str, err := in.String()
 	if err != nil {
-		return fmt.Errorf("Could not parse node into string: %v", err)
+		return nil, fmt.Errorf("Could not parse node into string: %v", err)
 	}
 
 	substed, err := envsubst.EvalAdvanced(str, envsubst.AdvancedMapping(c.envMapping))
 	if err != nil {
-		return fmt.Errorf("Could not envsubst: %v", err)
+		return nil, fmt.Errorf("Could not envsubst: %v", err)
 	}
 
 	if substed == str {
-		return nil
+		return in, nil
 	}
 
 	if isEmpty(substed) {
 		if !c.AllowEmpty {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"Value `%s` evaluated to empty string. Did you forget to set an environment variable?",
 				strings.TrimSuffix(str, "\n"))
 		}
@@ -109,16 +113,14 @@ func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) error {
 	}
 	node, err := yaml.Parse(substed)
 	if err != nil {
-		return fmt.Errorf("Could not parse node after envsubsting: %v", err)
+		return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
 	}
 
 	if node.YNode().Kind != yaml.ScalarNode {
-		return fmt.Errorf("Invalid output: `%s` did not evaluate to a scalar", str)
+		return nil, fmt.Errorf("Invalid output: `%s` did not evaluate to a scalar", str)
 	}
 
-	_, err = in.Pipe(yaml.Set(node))
-
-	return err
+	return in.Pipe(yaml.Set(node))
 }
 
 func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
@@ -126,22 +128,27 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 		return nil, nil
 	}
 
+	if len(in.FieldPath()) == 0 {
+		fmt.Fprintln(os.Stderr, in.GetApiVersion())
+		fmt.Fprintln(os.Stderr, in.GetKind())
+	}
+
 	switch y := in.YNode().Kind; y {
 	case yaml.MappingNode:
-		err := in.VisitFields(c.walkMapNode)
+		err := visitFields(in, c.walkMapNode)
 		if err != nil {
 			return nil, err
 		}
 		return in, nil
 	case yaml.SequenceNode:
-		err := in.VisitElements(c.walkSequenceNode)
+		err := visitElements(in, c.walkSequenceNode)
 		if err != nil {
 			return nil, err
 		}
 
 		return in, nil
 	case yaml.ScalarNode:
-		return nil, c.processScalarNode(in, false)
+		return c.processScalarNode(in, false)
 	case yaml.AliasNode, yaml.DocumentNode:
 		fallthrough
 	default:
