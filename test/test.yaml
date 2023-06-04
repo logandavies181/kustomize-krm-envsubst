@@ -49,6 +49,8 @@ spec:
         someStringNumber: "1"
         someStringNumberVar: "${PORT2:-5000}"
         someStringNumberVarWithLeadingSpace: " ${PORT2:-5000}"
+        someStringDecimal: "1.2"
+        someStringDecimalVar: ${PORT2:-1.2}
         someMultiLineString: |
           foo
           bar
@@ -62,12 +64,27 @@ spec:
       containers:
       - env:
         - name: OTHER_WORKERS
-          # Verify quoted default means the default outputs a string
-          value: ${OTHER_WORKERS:-"10"}
+          value: ${OTHER_WORKERS:-10}
         - name: WORKERS
-          # Verify quoted default means this will output a string
-          value: ${WORKERS:-"10"}
+          value: ${WORKERS:-10}
         image: nginx:1.14.2
         name: nginx
         ports:
         - containerPort: ${PORT2:-5002}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: bookinfo-ratings-port
+spec:
+  host: ratings.prod.svc.cluster.local
+  trafficPolicy:
+    portLevelSettings:
+    - port:
+        number: ${PORT2:-5000}
+      loadBalancer:
+        simple: ${LB_ALGO:-LEAST_REQUEST}
+    - port:
+        number: 9080
+      loadBalancer:
+        simple: ROUND_ROBIN

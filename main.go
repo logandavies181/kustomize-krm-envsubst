@@ -47,7 +47,7 @@ func contains(list []string, str string) bool {
 }
 
 func looksLikeNumber(s string) bool {
-	reg := regexp.MustCompile(`[0-9]+(.[0-9]*`)
+	reg := regexp.MustCompile(`^[0-9]+(\.[0-9])*$`)
 	return reg.MatchString(s)
 }
 
@@ -115,10 +115,10 @@ func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
 		if looksLikeNumber(substed) {
 			substed = `"` + substed + `"`
 		}
-		node, err = yaml.Parse(substed)
-		if err != nil {
-			return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
-		}
+	}
+	node, err = yaml.Parse(substed)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
 	}
 
 	// shouldn't happen but would do weird stuff

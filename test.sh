@@ -11,4 +11,8 @@ echo "Kustomizing"
 PORT=58008 WORKERS=96 kustomize build --enable-alpha-plugins --enable-exec test > test/expected.yaml
 
 echo "Running kubeconform"
-kubeconform test/expected.yaml
+kubeconform \
+  -schema-location default \
+  -schema-location \
+  'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+  test/expected.yaml

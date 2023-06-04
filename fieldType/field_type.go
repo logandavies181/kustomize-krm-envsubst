@@ -2,6 +2,7 @@ package fieldtype
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/yannh/kubeconform/pkg/registry"
@@ -22,27 +23,45 @@ const (
 )
 
 const (
-	nativeReg = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
+	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
+	crdsRegUrl = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
 )
 
-func GetFieldType(path []string) (FieldType, error) {
-	reg, err := registry.New(nativeReg, "", true, false, false)
-	if err != nil {
-		return Unknown, err
-	}
+var registries []registry.Registry
 
+func init() {
+	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
+	}
+	crdsReg, err := registry.New(crdsRegUrl, "", true, false, false)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
+	}
+	registries = []registry.Registry{nativeReg, crdsReg}
+}
+
+func GetFieldType(path []string) (FieldType, error) {
 	if len(path) < 2 {
 		return Unknown, fmt.Errorf("No GroupVersion or Kind")
 	}
 
-	_, data, err := reg.DownloadSchema(path[1], path[0], "master")
-	if err != nil {
-		return Unknown, err
-	}
+	var sch *jsonschema.Schema
+	for _, reg := range registries {
+		_, data, err := reg.DownloadSchema(path[1], path[0], "master")
+		switch err.(type) {
+		case *registry.NotFoundError:
+			continue
+		default:
+			if err != nil {
+				return Unknown, err
+			}
+		}
 
-	sch, err := jsonschema.CompileString("", string(data))
-	if err != nil {
-		return Unknown, err
+		sch, err = jsonschema.CompileString("", string(data))
+		if err != nil {
+			return Unknown, err
+		}
 	}
 
 	return walk(sch, path[2:]), nil
