@@ -1,7 +1,10 @@
 package fieldtype
 
 import (
+	"fmt"
+
 	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/yannh/kubeconform/pkg/registry"
 )
 
 type FieldType string
@@ -9,28 +12,40 @@ type FieldType string
 const (
 	Unknown FieldType = "unknown"
 
-	String FieldType = "string"
-	Array  FieldType = "array"
-	Object FieldType = "object"
-	Number FieldType = "number"
-	Bool   FieldType = "bool"
-	Null   FieldType = "null"
+	String  FieldType = "string"
+	Array   FieldType = "array"
+	Object  FieldType = "object"
+	Integer FieldType = "integer"
+	Number  FieldType = "number"
+	Bool    FieldType = "bool"
+	Null    FieldType = "null"
 )
 
-var gvkToSchema map[string]string
+const (
+	nativeReg = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
+)
 
-func GetFieldType(gvk string, path ...string) FieldType {
-	schemaData, ok := gvkToSchema[gvk]
-	if !ok {
-		return Unknown
-	}
-
-	sch, err := jsonschema.CompileString("", schemaData)
+func GetFieldType(path []string) (FieldType, error) {
+	reg, err := registry.New(nativeReg, "", true, false, false)
 	if err != nil {
-		return Unknown
+		return Unknown, err
 	}
 
-	return walk(sch, path)
+	if len(path) < 2 {
+		return Unknown, fmt.Errorf("No GroupVersion or Kind")
+	}
+
+	_, data, err := reg.DownloadSchema(path[1], path[0], "master")
+	if err != nil {
+		return Unknown, err
+	}
+
+	sch, err := jsonschema.CompileString("", string(data))
+	if err != nil {
+		return Unknown, err
+	}
+
+	return walk(sch, path[2:]), nil
 }
 
 // we're only using this to work out if we need to stringify or numberify
@@ -73,6 +88,8 @@ func walk(sch *jsonschema.Schema, path []string) FieldType {
 			// are smart about parsing those
 			return Unknown
 
+		case types.has(string(Integer)):
+			return Integer
 		case types.has(string(Number)):
 			return Number
 		case types.has(string(String)):
@@ -82,7 +99,6 @@ func walk(sch *jsonschema.Schema, path []string) FieldType {
 		default:
 			// don't do anything smart if we somehow end up with a
 			// non-scalar type or null
-
 			return Unknown
 		}
 	}
@@ -113,7 +129,14 @@ func walk(sch *jsonschema.Schema, path []string) FieldType {
 		// if it's not an array, assume it's an object key
 
 		if sub, ok := sch.Properties[next]; !ok {
-			return Unknown
+			// try additional Properties
+			switch val := sch.AdditionalProperties.(type) {
+			case *jsonschema.Schema:
+				return walk(val, path[1:])
+
+			default:
+				return Unknown
+			}
 		} else {
 			return walk(sub, path[1:])
 		}

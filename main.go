@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
+
+	fieldtype "github.com/logandavies181/kustomize-krm-envsubst/fieldType"
 
 	"github.com/logandavies181/envsubst"
 	"github.com/logandavies181/go-buildversion"
@@ -43,6 +46,11 @@ func contains(list []string, str string) bool {
 	return false
 }
 
+func looksLikeNumber(s string) bool {
+	reg := regexp.MustCompile(`[0-9]+(.[0-9]*`)
+	return reg.MatchString(s)
+}
+
 func (c Config) walkSequenceNode(in *yaml.RNode) error {
 	in.AppendToFieldPath("[]")
 
@@ -60,9 +68,6 @@ func (c Config) walkMapNode(in *yaml.MapNode) error {
 		return err
 	}
 	in.Value.AppendToFieldPath(strings.TrimSuffix(key, "\n"))
-	if key == "annotations\n" || key == "labels\n" {
-		return in.Value.VisitFields(c.walkMetadataNode)
-	}
 
 	_, err = c.Filter(in.Value)
 	if err != nil {
@@ -72,14 +77,7 @@ func (c Config) walkMapNode(in *yaml.MapNode) error {
 	return nil
 }
 
-// walkMetadataNode is the same as Filter for a scalar node,
-// except that it ensures the value is always treated as a string
-func (c Config) walkMetadataNode(in *yaml.MapNode) error {
-	_, err :=  c.processScalarNode(in.Value, true)
-	return err
-}
-
-func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) (*yaml.RNode, error) {
+func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
 	str, err := in.String()
 	if err != nil {
 		return nil, fmt.Errorf("Could not parse node into string: %v", err)
@@ -106,16 +104,24 @@ func (c Config) processScalarNode(in *yaml.RNode, alwaysString bool) (*yaml.RNod
 
 	substed = strings.TrimSuffix(substed, "\n")
 
-	if alwaysString {
-		if yaml.IsIdxNumber(substed) {
-			substed = `"` + substed + `"`
-		}
-	}
-	node, err := yaml.Parse(substed)
+	t, err := fieldtype.GetFieldType(in.FieldPath())
 	if err != nil {
-		return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
+		return nil, err
 	}
 
+	var node *yaml.RNode
+	switch t {
+	case fieldtype.String:
+		if looksLikeNumber(substed) {
+			substed = `"` + substed + `"`
+		}
+		node, err = yaml.Parse(substed)
+		if err != nil {
+			return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
+		}
+	}
+
+	// shouldn't happen but would do weird stuff
 	if node.YNode().Kind != yaml.ScalarNode {
 		return nil, fmt.Errorf("Invalid output: `%s` did not evaluate to a scalar", str)
 	}
@@ -129,8 +135,8 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 	}
 
 	if len(in.FieldPath()) == 0 {
-		groupVersion := strings.Split(in.GetApiVersion(), "/")
-		in.AppendToFieldPath(groupVersion...)
+		//groupVersion := strings.Split(in.GetApiVersion(), "/")
+		in.AppendToFieldPath(in.GetApiVersion())
 		in.AppendToFieldPath(in.GetKind())
 	}
 
@@ -149,7 +155,7 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 
 		return in, nil
 	case yaml.ScalarNode:
-		return c.processScalarNode(in, false)
+		return c.processScalarNode(in)
 	case yaml.AliasNode, yaml.DocumentNode:
 		fallthrough
 	default:
