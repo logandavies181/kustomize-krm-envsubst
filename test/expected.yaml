@@ -38,6 +38,9 @@ spec:
   selector:
     matchLabels:
       app: nginx
+  strategy:
+    rollingUpdate:
+      maxSurge: 10%
   template:
     metadata:
       annotations:

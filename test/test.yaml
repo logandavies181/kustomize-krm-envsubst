@@ -39,6 +39,9 @@ spec:
   selector:
     matchLabels:
       app: nginx
+  strategy:
+    rollingUpdate:
+      maxSurge: ${MAX_SURGE:-10%}
   template:
     metadata:
       annotations:

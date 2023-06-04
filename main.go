@@ -129,8 +129,9 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 	}
 
 	if len(in.FieldPath()) == 0 {
-		fmt.Fprintln(os.Stderr, in.GetApiVersion())
-		fmt.Fprintln(os.Stderr, in.GetKind())
+		groupVersion := strings.Split(in.GetApiVersion(), "/")
+		in.AppendToFieldPath(groupVersion...)
+		in.AppendToFieldPath(in.GetKind())
 	}
 
 	switch y := in.YNode().Kind; y {
