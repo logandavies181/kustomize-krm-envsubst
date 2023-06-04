@@ -5,6 +5,8 @@ go 1.19
 require (
 	github.com/logandavies181/envsubst v0.2.0
 	github.com/logandavies181/go-buildversion v0.1.0
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0
+	github.com/yannh/kubeconform v0.6.2
 	sigs.k8s.io/kustomize/kyaml v0.14.1
 )
 

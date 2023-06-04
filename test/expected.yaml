@@ -38,6 +38,9 @@ spec:
   selector:
     matchLabels:
       app: nginx
+  strategy:
+    rollingUpdate:
+      maxSurge: 10%
   template:
     metadata:
       annotations:
@@ -49,6 +52,8 @@ spec:
           defaultname
           bar
         someString: defaultname
+        someStringDecimal: "1.2"
+        someStringDecimalVar: "1.2"
         someStringNumber: "1"
         someStringNumberVar: "5000"
         someStringNumberVarWithLeadingSpace: ' 5000'
@@ -65,3 +70,20 @@ spec:
         name: nginx
         ports:
         - containerPort: 5002
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: bookinfo-ratings-port
+spec:
+  host: ratings.prod.svc.cluster.local
+  trafficPolicy:
+    portLevelSettings:
+    - loadBalancer:
+        simple: LEAST_REQUEST
+      port:
+        number: 5000
+    - loadBalancer:
+        simple: ROUND_ROBIN
+      port:
+        number: 9080
