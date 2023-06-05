@@ -28,12 +28,12 @@ const (
 	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
 	crdsRegUrl   = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
 
-	k8sVersion   = "master"
+	k8sVersion = "master"
 )
 
 var (
 	registries []registry.Registry
-	regCache      = cache.NewInMemoryCache()
+	regCache   = cache.NewInMemoryCache()
 )
 
 func init() {
