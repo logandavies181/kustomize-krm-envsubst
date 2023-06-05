@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/yannh/kubeconform/pkg/cache"
 	"github.com/yannh/kubeconform/pkg/registry"
 )
 
@@ -23,11 +24,17 @@ const (
 )
 
 const (
+	// jsonschemas used by kubeconform
 	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
 	crdsRegUrl   = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+
+	k8sVersion = "master"
 )
 
-var registries []registry.Registry
+var (
+	registries []registry.Registry
+	regCache   = cache.NewInMemoryCache()
+)
 
 func init() {
 	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
@@ -47,20 +54,32 @@ func GetFieldType(path []string) (FieldType, error) {
 	}
 
 	var sch *jsonschema.Schema
-	for _, reg := range registries {
-		_, data, err := reg.DownloadSchema(path[1], path[0], "master")
-		switch err.(type) {
-		case *registry.NotFoundError:
-			continue
-		default:
-			if err != nil {
-				return Unknown, err
-			}
-		}
 
+	// try cache first
+	if cacheData, err := regCache.Get(path[1], path[0], k8sVersion); err == nil {
+		data := cacheData.([]byte)
 		sch, err = jsonschema.CompileString("", string(data))
 		if err != nil {
-			return Unknown, err
+			return Unknown, fmt.Errorf("Could not parse schema: %w", err)
+		}
+	} else {
+		for _, reg := range registries {
+			_, data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
+			switch err.(type) {
+			case *registry.NotFoundError:
+				continue
+			default:
+				if err != nil {
+					return Unknown, err
+				}
+			}
+			sch, err = jsonschema.CompileString("", string(data))
+			if err != nil {
+				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
+			}
+			if err := regCache.Set(path[1], path[0], k8sVersion, data); err != nil {
+				return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
+			}
 		}
 	}
 

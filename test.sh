@@ -8,7 +8,7 @@ echo "Compiling"
 go build
 
 echo "Kustomizing"
-PORT=58008 WORKERS=96 kustomize build --enable-alpha-plugins --enable-exec test > test/expected.yaml
+time PORT=58008 WORKERS=96 kustomize build --enable-alpha-plugins --enable-exec test > test/expected.yaml
 
 echo "Running kubeconform"
 kubeconform \
