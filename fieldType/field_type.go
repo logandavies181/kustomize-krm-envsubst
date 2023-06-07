@@ -56,12 +56,8 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	if cacheData, err := regCache.Get(path[1], path[0], k8sVersion); err == nil {
-		data := cacheData.([]byte)
-		sch, err = jsonschema.CompileString("", string(data))
-		if err != nil {
-			return Unknown, fmt.Errorf("Could not parse schema: %w", err)
-		}
+	if cacheSchema, err := regCache.Get(path[1], path[0], k8sVersion); err == nil {
+		sch = cacheSchema.(*jsonschema.Schema)
 	} else {
 		for _, reg := range registries {
 			_, data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
@@ -77,7 +73,7 @@ func GetFieldType(path []string) (FieldType, error) {
 			if err != nil {
 				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
 			}
-			if err := regCache.Set(path[1], path[0], k8sVersion, data); err != nil {
+			if err := regCache.Set(path[1], path[0], k8sVersion, sch); err != nil {
 				return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
 			}
 		}
