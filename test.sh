@@ -7,8 +7,15 @@ set -o pipefail
 echo "Compiling"
 go build
 
+# Set some env vars used in the test kustomization
+export PORT=58008
+export WORKERS=96
+export LEAF_PEM=$(cat test/leaf.pem)
+export INTER_PEM=$(cat test/inter.pem)
+export ROOT_PEM=$(cat test/root.pem)
+
 echo "Kustomizing"
-time PORT=58008 WORKERS=96 kustomize build --enable-alpha-plugins --enable-exec test > test/expected.yaml
+time kustomize build --enable-alpha-plugins --enable-exec test > test/expected.yaml
 
 echo "Running kubeconform"
 kubeconform \
