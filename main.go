@@ -63,7 +63,7 @@ func (c Config) walkSequenceNode(in *yaml.RNode) error {
 }
 
 func (c Config) walkMapNode(in *yaml.MapNode) error {
-	key, err := in.Key.String()
+	key, err := in.Key.GetString(".")
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,22 @@ func (c Config) walkMapNode(in *yaml.MapNode) error {
 }
 
 func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
-	str, err := in.String()
+	var str string
+	var err error
+
+	// The difference here is that RNode.String() gives a _representation_
+	// of the _node_. If the value of the node is a string, that representation could
+	// include a bit extra to represent a fold, i.e. | or |- and some whitespace, which 
+	// we don't want.
+	//
+	// GetString gives us the actual value being _held_ by the node,
+	// but will error if the value is not a string.
+	if in.IsStringValue() {
+		str, err = in.GetString(".")
+	} else {
+		str, err = in.String()
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("Could not parse node into string: %v", err)
 	}
@@ -113,12 +128,15 @@ func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
 	switch t {
 	case fieldtype.String:
 		if looksLikeNumber(substed) {
-			substed = `"` + substed + `"`
+			// Somehow we end up with '"58008"' if we don't do this
+			node = yaml.NewStringRNode(substed)
 		}
 	}
-	node, err = yaml.Parse(substed)
-	if err != nil {
-		return nil, fmt.Errorf("Could not parse node after envsubsting: %v", err)
+
+	// If our shim for string numbers just above didn't activate
+	// then actually create the node
+	if node == nil {
+		node = yaml.NewScalarRNode(substed)
 	}
 
 	// shouldn't happen but would do weird stuff
