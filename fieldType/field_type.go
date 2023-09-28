@@ -86,6 +86,10 @@ func GetFieldType(path []string) (FieldType, error) {
 // a field, so we prefer string if it's available and multiple scalar types
 // are found
 func walk(sch *jsonschema.Schema, path []string) FieldType {
+	if sch == nil {
+		return Unknown
+	}
+
 	if sch.Ref != nil {
 		sch = sch.Ref
 	}

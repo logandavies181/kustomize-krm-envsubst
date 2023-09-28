@@ -88,3 +88,13 @@ spec:
         number: 9080
       loadBalancer:
         simple: ROUND_ROBIN
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trust-store
+stringData:
+  leaf: ${LEAF_PEM}
+  chain: |
+    ${INTER_PEM}
+    ${ROOT_PEM}
