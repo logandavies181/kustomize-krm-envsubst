@@ -54,7 +54,7 @@ func looksLikeNumber(s string) bool {
 
 // Yaml 1.1 and earlier uses all sorts of things for booleans
 var yamlBoolRegex = regexp.
-	MustCompile(`y|Y|yes|Yes|YES|n|N|no|No|NO|true|True|TRUE|false|False|FALSE|on|On|ON|off|Off|OFF`)
+	MustCompile(`^(y|Y|yes|Yes|YES|n|N|no|No|NO|true|True|TRUE|false|False|FALSE|on|On|ON|off|Off|OFF)$`)
 
 func looksLikeBool(s string) bool {
 	return yamlBoolRegex.MatchString(s)
