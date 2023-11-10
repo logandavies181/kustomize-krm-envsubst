@@ -46,9 +46,18 @@ func contains(list []string, str string) bool {
 	return false
 }
 
+var numberRegex = regexp.MustCompile(`^[0-9]+(\.[0-9])*$`)
+
 func looksLikeNumber(s string) bool {
-	reg := regexp.MustCompile(`^[0-9]+(\.[0-9])*$`)
-	return reg.MatchString(s)
+	return numberRegex.MatchString(s)
+}
+
+// Yaml 1.1 and earlier uses all sorts of things for booleans
+var yamlBoolRegex = regexp.
+	MustCompile(`^(y|Y|yes|Yes|YES|n|N|no|No|NO|true|True|TRUE|false|False|FALSE|on|On|ON|off|Off|OFF)$`)
+
+func looksLikeBool(s string) bool {
+	return yamlBoolRegex.MatchString(s)
 }
 
 func (c Config) walkSequenceNode(in *yaml.RNode) error {
@@ -83,7 +92,7 @@ func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
 
 	// The difference here is that RNode.String() gives a _representation_
 	// of the _node_. If the value of the node is a string, that representation could
-	// include a bit extra to represent a fold, i.e. | or |- and some whitespace, which 
+	// include a bit extra to represent a fold, i.e. | or |- and some whitespace, which
 	// we don't want.
 	//
 	// GetString gives us the actual value being _held_ by the node,
@@ -127,7 +136,7 @@ func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
 	var node *yaml.RNode
 	switch t {
 	case fieldtype.String:
-		if looksLikeNumber(substed) {
+		if looksLikeNumber(substed) || looksLikeBool(substed) {
 			// Somehow we end up with '"58008"' if we don't do this
 			node = yaml.NewStringRNode(substed)
 		}

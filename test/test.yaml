@@ -29,6 +29,9 @@ kind: Deployment
 metadata:
   name: nginx-deployment
   annotations:
+    # The framework actually already handles metadata.annotations,
+    # so no need for too many test cases here. Use .spec.template.metadata.annoations instead
+
     someString: "${NAME:-defaultname}"
     someStringNumber: "1"
     someStringNumberVar: "${PORT2:-5000}"
@@ -58,6 +61,9 @@ spec:
           foo
           ${NAME:-defaultname}
           bar
+        someStringBoolean: "true"
+        someStringBooleanVar: "${BOOL_VAR:-true}"
+        someStringWackyBooleanVar: "${WACKY_BOOL_VAR:-no}"
       labels:
         app: nginx
     spec:
