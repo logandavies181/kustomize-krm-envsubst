@@ -46,7 +46,7 @@ func contains(list []string, str string) bool {
 	return false
 }
 
-var numberRegex = regexp.MustCompile(`^[0-9]+(\.[0-9])*$`)
+var numberRegex = regexp.MustCompile(`^[0-9]+(\.[0-9]*)$`)
 
 func looksLikeNumber(s string) bool {
 	return numberRegex.MatchString(s)
