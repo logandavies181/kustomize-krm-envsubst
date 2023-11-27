@@ -73,6 +73,12 @@ func (c Config) walkSequenceNode(in *yaml.RNode) error {
 
 func (c Config) walkMapNode(in *yaml.MapNode) error {
 	key, err := in.Key.GetString(".")
+
+	_, err = c.Filter(in.Key)
+	if err != nil {
+		return err
+	}
+
 	if err != nil {
 		return err
 	}
