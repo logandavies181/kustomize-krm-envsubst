@@ -8,7 +8,7 @@ spec:
   ports:
   - protocol: TCP
     port: 8666
-    targetPort: ${PORT}
+    ${TARGET_PORT:-targetPort}: ${PORT}
 ---
 kind: Service
 apiVersion: v1
