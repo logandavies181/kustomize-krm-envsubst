@@ -46,7 +46,7 @@ func contains(list []string, str string) bool {
 	return false
 }
 
-var numberRegex = regexp.MustCompile(`^[0-9]+(\.[0-9])*$`)
+var numberRegex = regexp.MustCompile(`^[0-9]+(\.[0-9]*)?$`)
 
 func looksLikeNumber(s string) bool {
 	return numberRegex.MatchString(s)
@@ -72,6 +72,11 @@ func (c Config) walkSequenceNode(in *yaml.RNode) error {
 }
 
 func (c Config) walkMapNode(in *yaml.MapNode) error {
+	_, err := c.Filter(in.Key)
+	if err != nil {
+		return err
+	}
+
 	key, err := in.Key.GetString(".")
 	if err != nil {
 		return err
