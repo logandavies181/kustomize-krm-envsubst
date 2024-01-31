@@ -72,7 +72,7 @@ kustomize build --enable-alpha-plugins --enable-exec .
 Use this method to use this plugin with `kubectl kustomize`
 
 Install the binary to
-${XDG_CONFIG_HOME:-~/.config}/kustomize/plugin/kustomize-krm-envsubst/v1alpha/kustomize-krm-envsubst/kustomize-krm-envsubst
+`${XDG_CONFIG_HOME:-~/.config}/kustomize/plugin/kustomize-krm-envsubst/v1alpha/kustomize-krm-envsubst/kustomize-krm-envsubst`
 
 Set up your kustomization.yaml and other files as above but use this config for transformer.yaml:
 
