@@ -199,21 +199,25 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 // a string that represents an integer. If so, it will wrap it in
 // quotes
 func environmentSubstitute(s string, nodeInfo envsubst.NodeInfo) string {
-	looksLikeQuotedInt := false
-	for _, arg := range nodeInfo.Args() {
-		if len(arg) > 2 && arg[0] == byte('"') && arg[0] == arg[len(arg)-1] {
-			looksLikeQuotedInt = yaml.IsIdxNumber(arg[1 : len(arg)-1])
-		}
-	}
+	// TODO: add explicit value mapping here and remove this code.
+	// If the type info isn't available from the schema repo, then the
+	// user is going to have to specify the values explicitly
+
+	// looksLikeQuotedInt := false
+	// for _, arg := range nodeInfo.Args() {
+	// 	if len(arg) > 2 && arg[0] == byte('"') && arg[0] == arg[len(arg)-1] {
+	// 		looksLikeQuotedInt = yaml.IsIdxNumber(arg[1 : len(arg)-1])
+	// 	}
+	// }
 
 	mapped := os.Getenv(s)
 	ret := nodeInfo.Result(mapped)
 
 	// check if args look like quoted integers
 	// AND ( if the function has triggered OR the function had no effect )
-	if looksLikeQuotedInt && (!contains(nodeInfo.Args(), ret) || ret == mapped) {
-		ret = fmt.Sprintf(`"%s"`, ret)
-	}
+	// if looksLikeQuotedInt && (!contains(nodeInfo.Args(), ret) || ret == mapped) {
+	// 	ret = fmt.Sprintf(`"%s"`, ret)
+	// }
 
 	return ret
 }
