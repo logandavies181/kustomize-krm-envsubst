@@ -6,8 +6,5 @@ metadata:
     config.kubernetes.io/function: |
       exec:
         path: ../../kustomize-krm-envsubst
-# Has not effect as includedVariableNames is set and takes precedence
 excludedVariableNames:
-  - "INCLUDED_VAR"
-includedVariableNames:
-  - "INCLUDED_VAR"
+  - "EXCLUDED_VAR"

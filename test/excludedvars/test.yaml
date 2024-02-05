@@ -1,0 +1,14 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: the-service
+  annotations:
+    foo: "${EXCLUDED_VAR}"
+    bar: "${OTHER_VAR:-defaults ok!}"
+spec:
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 8666
+    targetPort: ${PORT}
