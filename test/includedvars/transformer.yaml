@@ -5,4 +5,6 @@ metadata:
   annotations:
     config.kubernetes.io/function: |
       exec:
-        path: ../kustomize-krm-envsubst
+        path: ../../kustomize-krm-envsubst
+includedVariableNames:
+  - "INCLUDED_VAR"

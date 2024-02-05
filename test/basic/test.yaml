@@ -3,6 +3,8 @@ kind: Service
 apiVersion: v1
 metadata:
   name: the-service
+  annotations:
+    something: "${TO_LOWERCASE,,}"
 spec:
   type: ClusterIP
   ports:

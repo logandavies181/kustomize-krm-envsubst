@@ -239,10 +239,13 @@ func main() {
 	}
 
 	fn := func(items []*yaml.RNode) ([]*yaml.RNode, error) {
+		// This function is passed to envsubst.AdvancedMapping. The first result
+		// is the value to interpolate. The second is whether or not to perform
+		// the bash-like substitution afterward; which is currently effectively
+		// ignored by calling nodeinfo.Result(). TODO
 		config.envMapping = func(s string, nodeInfo envsubst.NodeInfo) (string, bool) {
 			// IncludedVars and ExcludedVars are mutually exclusive
 			// IncludedVars takes precedent
-			// TODO: readme
 
 			if len(config.IncludedVars) == 0 {
 				if contains(config.ExcludedVars, s) {

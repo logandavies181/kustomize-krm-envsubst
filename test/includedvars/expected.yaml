@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    bar: ${OTHER_VAR}
+    foo: INCLUDE_THIS
+  name: the-service
+spec:
+  ports:
+  - port: 8666
+    protocol: TCP
+    targetPort: ${PORT}
+  type: ClusterIP
