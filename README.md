@@ -40,9 +40,8 @@ metadata:
       exec:
         # ~ is not expanded by kustomize :(
         path: /path/to/kustomize-krm-envsubst
-#spec:
-#  excludedVariableNames: [] # used to denylist certain env var names from being injected    
-#  includedVariableNames: [] # used to enumerate the list of env var names to inject
+#excludedVariableNames: [] # used to denylist certain env var names from being injected    
+#includedVariableNames: [] # used to enumerate the list of env var names to inject
 ```
 
 Inject environment variables into your manifests!

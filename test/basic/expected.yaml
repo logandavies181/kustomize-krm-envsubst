@@ -165,6 +165,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    something: was_uppercase
   name: the-service
 spec:
   ports:
