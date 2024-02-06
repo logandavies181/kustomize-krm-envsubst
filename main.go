@@ -20,8 +20,6 @@ import (
 var version string // goreleaser will set this
 
 type Config struct {
-	envMapping envsubst.AdvancedMapping
-
 	AllowEmpty   bool     `yaml:"allowEmpty" json:"allowEmpty"`
 	ExcludedVars []string `yaml:"excludedVariableNames" json:"excludedVariableNames"`
 	IncludedVars []string `yaml:"includedVariableNames" json:"includedVariableNames"`
@@ -112,7 +110,7 @@ func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
 		return nil, fmt.Errorf("Could not parse node into string: %v", err)
 	}
 
-	substed, err := envsubst.EvalAdvanced(str, envsubst.AdvancedMapping(c.envMapping))
+	substed, err := envsubst.EvalAdvanced(str, envsubst.AdvancedMapping(c.advMapping))
 	if err != nil {
 		return nil, fmt.Errorf("Could not envsubst: %v", err)
 	}
@@ -194,32 +192,39 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 	}
 }
 
-// environmentSubstitute performs an environment substitution. It
-// also inspects the args to infer if the value is intended to be
-// a string that represents an integer. If so, it will wrap it in
-// quotes
-func environmentSubstitute(s string, nodeInfo envsubst.NodeInfo) string {
-	// TODO: add explicit value mapping here and remove this code.
-	// If the type info isn't available from the schema repo, then the
-	// user is going to have to specify the values explicitly
+// advMapping substitutes varName for its value from the environment or from
+// explicit mappings defined by the user.
+//
+// This function is passed to envsubst.AdvancedMapping. The first result
+// is the value to interpolate. The second is whether or not to perform
+// the bash-like substitution afterward.
+func (c Config) advMapping(varName string, nodeInfo envsubst.NodeInfo) (string, bool) {
+	if !c.shouldMap(varName) {
+		return nodeInfo.Orig(), false
+	}
 
-	// looksLikeQuotedInt := false
-	// for _, arg := range nodeInfo.Args() {
-	// 	if len(arg) > 2 && arg[0] == byte('"') && arg[0] == arg[len(arg)-1] {
-	// 		looksLikeQuotedInt = yaml.IsIdxNumber(arg[1 : len(arg)-1])
-	// 	}
-	// }
+	mapped := os.Getenv(varName)
 
-	mapped := os.Getenv(s)
-	ret := nodeInfo.Result(mapped)
+	return mapped, true
+}
 
-	// check if args look like quoted integers
-	// AND ( if the function has triggered OR the function had no effect )
-	// if looksLikeQuotedInt && (!contains(nodeInfo.Args(), ret) || ret == mapped) {
-	// 	ret = fmt.Sprintf(`"%s"`, ret)
-	// }
+func (c Config) shouldMap(varName string) bool {
+	// IncludedVars and ExcludedVars are mutually exclusive
+	// IncludedVars takes precedent
 
-	return ret
+	if len(c.IncludedVars) == 0 {
+		if contains(c.ExcludedVars, varName) {
+			return false
+		}
+
+		return true
+	}
+
+	if !contains(c.IncludedVars, varName) {
+		return false
+	}
+
+	return true
 }
 
 func main() {
@@ -243,29 +248,6 @@ func main() {
 	}
 
 	fn := func(items []*yaml.RNode) ([]*yaml.RNode, error) {
-		// This function is passed to envsubst.AdvancedMapping. The first result
-		// is the value to interpolate. The second is whether or not to perform
-		// the bash-like substitution afterward; which is currently effectively
-		// ignored by calling nodeinfo.Result(). TODO
-		config.envMapping = func(s string, nodeInfo envsubst.NodeInfo) (string, bool) {
-			// IncludedVars and ExcludedVars are mutually exclusive
-			// IncludedVars takes precedent
-
-			if len(config.IncludedVars) == 0 {
-				if contains(config.ExcludedVars, s) {
-					return nodeInfo.Orig(), false
-				}
-
-				return environmentSubstitute(s, nodeInfo), false
-			}
-
-			if !contains(config.IncludedVars, s) {
-				return nodeInfo.Orig(), false
-			}
-
-			return environmentSubstitute(s, nodeInfo), false
-		}
-
 		for i := range items {
 			err := items[i].PipeE(config)
 			if err != nil {
