@@ -2,7 +2,8 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    foo: "58008"
+    bar: ${WORKERS}
+    foo: ${EXCLUDED_VAR:-${PORT}}
   name: the-service
 spec:
   ports:

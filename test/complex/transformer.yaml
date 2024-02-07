@@ -6,3 +6,6 @@ metadata:
     config.kubernetes.io/function: |
       exec:
         path: ../../kustomize-krm-envsubst
+excludedVariableNames:
+  - "EXCLUDED_VAR"
+  - "WORKERS"

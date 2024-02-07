@@ -4,7 +4,8 @@ apiVersion: v1
 metadata:
   name: the-service
   annotations:
-    foo: "${PORT2:-${PORT}}"
+    foo: "${EXCLUDED_VAR:-${PORT}}"
+    bar: "${UNSET_VAR:-${WORKERS}}"
 spec:
   type: ClusterIP
   ports:
