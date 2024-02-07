@@ -42,6 +42,9 @@ metadata:
         path: /path/to/kustomize-krm-envsubst
 #excludedVariableNames: [] # used to denylist certain env var names from being injected    
 #includedVariableNames: [] # used to enumerate the list of env var names to inject
+#values: # explicit keys and values to inject
+#  FOO: baz
+#  BAR: zar
 ```
 
 Inject environment variables into your manifests!
@@ -60,7 +63,7 @@ stringData:
 Render your configuration
 
 ```bash
-# Can only be run with `kustomize` and not `kubectl kustomize`
+# Can only be run in this mode with `kustomize build` and not `kubectl kustomize`
 # see https://github.com/kubernetes-sigs/kustomize/issues/4556#issuecomment-1092095023
 
 kustomize build --enable-alpha-plugins --enable-exec .
@@ -83,4 +86,7 @@ metadata:
   name: envsubst
 #excludedVariableNames: [] # used to denylist certain env var names from being injected    
 #includedVariableNames: [] # used to enumerate the list of env var names to inject
+#values: # explicit keys and values to inject
+#  FOO: baz
+#  BAR: zar
 ```

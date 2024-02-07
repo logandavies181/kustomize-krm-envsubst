@@ -20,9 +20,10 @@ import (
 var version string // goreleaser will set this
 
 type Config struct {
-	AllowEmpty   bool     `yaml:"allowEmpty" json:"allowEmpty"`
-	ExcludedVars []string `yaml:"excludedVariableNames" json:"excludedVariableNames"`
-	IncludedVars []string `yaml:"includedVariableNames" json:"includedVariableNames"`
+	AllowEmpty   bool              `yaml:"allowEmpty" json:"allowEmpty"`
+	ExcludedVars []string          `yaml:"excludedVariableNames" json:"excludedVariableNames"`
+	IncludedVars []string          `yaml:"includedVariableNames" json:"includedVariableNames"`
+	Values       map[string]string `yaml:"values" json:"values"`
 }
 
 func isEmpty(str string) bool {
@@ -203,7 +204,12 @@ func (c Config) advMapping(varName string, nodeInfo envsubst.NodeInfo) (string, 
 		return nodeInfo.Orig(), false
 	}
 
-	mapped := os.Getenv(varName)
+	var mapped string
+	if val, ok := c.Values[varName]; ok {
+		mapped = val
+	} else {
+		mapped = os.Getenv(varName)
+	}
 
 	return mapped, true
 }
