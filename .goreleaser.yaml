@@ -10,6 +10,11 @@ builds:
       - windows
       - darwin
 
+dockers:
+  - image_templates:
+    - "logie/kustomize-krm-envsubst:latest"
+    - "logie/kustomize-krm-envsubst:{{ .Tag }}"
+
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
