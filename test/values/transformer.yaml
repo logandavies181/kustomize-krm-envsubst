@@ -1,0 +1,13 @@
+apiVersion: test
+kind: TestKind
+metadata:
+  name: notImportantHere
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: ../../kustomize-krm-envsubst
+values:
+  STRING_VAL: foo
+  BOOL_VAL: true
+  INT_VAL: 1
+  FLOAT_VAL: 1.1

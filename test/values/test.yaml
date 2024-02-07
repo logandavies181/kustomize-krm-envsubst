@@ -1,0 +1,16 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: the-service
+  annotations:
+    foo: "${STRING_VAL}"
+    bar: "${BOOL_VAL}"
+    baz: "${INT_VAL}"
+    zar: "${FLOAT_VAL}"
+spec:
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 8666
+    targetPort: ${PORT}
