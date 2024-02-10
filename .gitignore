@@ -18,3 +18,5 @@ kustomize
 kustomize-krm-envsubst
 
 dist/
+
+schemas

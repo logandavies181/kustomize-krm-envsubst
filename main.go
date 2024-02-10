@@ -71,16 +71,17 @@ func (c Config) walkSequenceNode(in *yaml.RNode) error {
 }
 
 func (c Config) walkMapNode(in *yaml.MapNode) error {
-	_, err := c.Filter(in.Key)
+	key, err := envsubst.EvalAdvanced(in.Key.MustString(), c.advMapping)
 	if err != nil {
 		return err
 	}
 
-	key, err := in.Key.GetString(".")
+	in.Value.AppendToFieldPath(strings.TrimSuffix(key, "\n"))
+
+	_, err = c.Filter(in.Key)
 	if err != nil {
 		return err
 	}
-	in.Value.AppendToFieldPath(strings.TrimSuffix(key, "\n"))
 
 	_, err = c.Filter(in.Value)
 	if err != nil {

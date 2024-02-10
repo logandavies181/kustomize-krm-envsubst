@@ -2,7 +2,6 @@ package fieldtype
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/yannh/kubeconform/pkg/cache"
@@ -37,20 +36,17 @@ var (
 )
 
 func init() {
-	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
-	}
-	crdsReg, err := registry.New(crdsRegUrl, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
-	}
-	registries = []registry.Registry{nativeReg, crdsReg}
+	registries = []registry.Registry{reg{}}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
 	if len(path) < 2 {
 		return Unknown, fmt.Errorf("No GroupVersion or Kind")
+	}
+
+	// This should only happen when applying the filter to keys of maps
+	if path[0] == "" || path[1] == "" {
+		return Unknown, nil
 	}
 
 	var sch *jsonschema.Schema
