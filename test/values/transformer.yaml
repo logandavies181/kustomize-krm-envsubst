@@ -4,8 +4,9 @@ metadata:
   name: notImportantHere
   annotations:
     config.kubernetes.io/function: |
-      exec:
-        path: ../../kustomize-krm-envsubst
+      container:
+        image: docker.io/logie/kustomize-krm-envsubst:latest
+        network: true
 values:
   STRING_VAL: foo
   BOOL_VAL: true

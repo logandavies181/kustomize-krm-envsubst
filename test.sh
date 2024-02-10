@@ -26,7 +26,7 @@ export INCLUDED_VAR=INCLUDE_THIS
 for dir in $dirs
 do
   echo "Kustomizing ${dir}"
-  time kustomize build --enable-alpha-plugins --enable-exec "${dir}" > "${dir}/expected.yaml"
+  time kustomize build --network=true --enable-alpha-plugins --enable-exec "${dir}" > "${dir}/expected.yaml"
 
   echo "Running kubeconform on result of ${dir}"
   kubeconform \
