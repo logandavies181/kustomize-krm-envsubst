@@ -243,13 +243,7 @@ func main() {
 		fname := os.Args[1]
 		fdata, err := os.ReadFile(fname)
 		if err == nil {
-			var c Config
-			err = yaml.Unmarshal(fdata, &c)
-			if err == nil {
-				config.AllowEmpty = c.AllowEmpty
-				config.IncludedVars = c.IncludedVars
-				config.ExcludedVars = c.ExcludedVars
-			}
+			_ = yaml.Unmarshal(fdata, config)
 		}
 	}
 
