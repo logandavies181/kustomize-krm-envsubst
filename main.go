@@ -24,6 +24,7 @@ type Config struct {
 	ExcludedVars []string          `yaml:"excludedVariableNames" json:"excludedVariableNames"`
 	IncludedVars []string          `yaml:"includedVariableNames" json:"includedVariableNames"`
 	Values       map[string]string `yaml:"values" json:"values"`
+	IgnoredKeys  []string          `yaml:"ignoredKeys" json:"ignoredKeys"`
 }
 
 func isEmpty(str string) bool {
@@ -82,12 +83,26 @@ func (c Config) walkMapNode(in *yaml.MapNode) error {
 	}
 	in.Value.AppendToFieldPath(strings.TrimSuffix(key, "\n"))
 
+	if c.shouldIgnoreKey(key) {
+		return nil
+	}
+
 	_, err = c.Filter(in.Value)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (c Config) shouldIgnoreKey(key string) bool {
+	for _, ignoredKey := range c.IgnoredKeys {
+		if ignoredKey == key {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c Config) processScalarNode(in *yaml.RNode) (*yaml.RNode, error) {
