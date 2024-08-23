@@ -42,6 +42,8 @@ metadata:
         path: /path/to/kustomize-krm-envsubst
 #excludedVariableNames: [] # used to denylist certain env var names from being injected    
 #includedVariableNames: [] # used to enumerate the list of env var names to inject
+#ignoredKeys: [] # used to exclude parts of the input from processing 
+                 # for example if you're passing a script in a configmap
 #values: # explicit keys and values to inject
 #  FOO: baz
 #  BAR: zar
@@ -86,6 +88,8 @@ metadata:
   name: envsubst
 #excludedVariableNames: [] # used to denylist certain env var names from being injected    
 #includedVariableNames: [] # used to enumerate the list of env var names to inject
+#ignoredKeys: [] # used to exclude parts of the input from processing 
+                 # for example if you're passing a script in a configmap
 #values: # explicit keys and values to inject
 #  FOO: baz
 #  BAR: zar

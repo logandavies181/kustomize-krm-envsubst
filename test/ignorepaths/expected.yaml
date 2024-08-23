@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  script.sh: |
+    #!/usr/bin/env bash
+    strs=(foo bar baz)
+    for str in "${strs[*]}"
+    do
+        echo "$str"
+    done
+kind: ConfigMap
+metadata:
+  name: some-script
