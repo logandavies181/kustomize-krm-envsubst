@@ -7,6 +7,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/yannh/kubeconform/pkg/cache"
 	"github.com/yannh/kubeconform/pkg/registry"
+	"k8s.io/utils/env"
 )
 
 type FieldType string
@@ -37,11 +38,11 @@ var (
 )
 
 func init() {
-	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
+	nativeReg, err := registry.New(env.GetString("KUBECONFORM_NATIVE_SCHEMA_REGISTRY_URL", nativeRegUrl), "", true, false, false)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
 	}
-	crdsReg, err := registry.New(crdsRegUrl, "", true, false, false)
+	crdsReg, err := registry.New(env.GetString("KUBECONFORM_CRD_REGISTRY_URL", crdsRegUrl), "", true, false, false)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
 	}
@@ -56,11 +57,11 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	if cacheSchema, err := regCache.Get(path[1], path[0], k8sVersion); err == nil {
+	if cacheSchema, err := regCache.Get(path[1], path[0], env.GetString("KUBECONFORM_K8S_VERSION", k8sVersion)); err == nil {
 		sch = cacheSchema.(*jsonschema.Schema)
 	} else {
 		for _, reg := range registries {
-			_, data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
+			_, data, err := reg.DownloadSchema(path[1], path[0], env.GetString("KUBECONFORM_K8S_VERSION", k8sVersion))
 			switch err.(type) {
 			case *registry.NotFoundError:
 				continue
@@ -73,7 +74,7 @@ func GetFieldType(path []string) (FieldType, error) {
 			if err != nil {
 				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
 			}
-			if err := regCache.Set(path[1], path[0], k8sVersion, sch); err != nil {
+			if err := regCache.Set(path[1], path[0], env.GetString("KUBECONFORM_K8S_VERSION", k8sVersion), sch); err != nil {
 				return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
 			}
 		}
