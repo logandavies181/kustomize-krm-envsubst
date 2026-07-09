@@ -34,7 +34,7 @@ metadata:
     # The framework actually already handles metadata.annotations,
     # so no need for too many test cases here. Use .spec.template.metadata.annoations instead
 
-    someString: "${NAME:-defaultname}"
+    someString: "${_NAME:-defaultname}"
     someStringNumber: "1"
     someStringNumberVar: "${PORT2:-5000}"
   labels:
@@ -50,7 +50,7 @@ spec:
   template:
     metadata:
       annotations:
-        someString: "${NAME:-defaultname}"
+        someString: "${_NAME:-defaultname}"
         someStringNumber: "1"
         someStringNumberVar: "${PORT2:-5000}"
         someStringNumberVarWithLeadingSpace: " ${PORT2:-5000}"
@@ -61,7 +61,7 @@ spec:
           bar
         someMultiLineStringvar: |
           foo
-          ${NAME:-defaultname}
+          ${_NAME:-defaultname}
           bar
         someStringBoolean: "true"
         someStringBooleanVar: "${BOOL_VAR:-true}"
