@@ -1,20 +1,15 @@
 package fieldtype
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 
-	"github.com/santhosh-tekuri/jsonschema/v5"
+	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/yannh/kubeconform/pkg/cache"
 	"github.com/yannh/kubeconform/pkg/loader"
 	"github.com/yannh/kubeconform/pkg/registry"
 )
-
-//go:embed master-standalone-strict
-var schemafs embed.FS
 
 type FieldType string
 
@@ -32,7 +27,6 @@ const (
 
 const (
 	// jsonschemas used by kubeconform
-	embeddedRegUrl = "http://localhost:42069/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
 	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
 	crdsRegUrl   = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
 
@@ -45,24 +39,15 @@ var (
 )
 
 func init() {
-	go func() {
-		http.Handle("/", http.FileServerFS(schemafs))
-		http.ListenAndServe(":42069", nil)
-	}()
-
-	embeddedReg, err := registry.New(embeddedRegUrl, "", true, false, false)
+	embeddedReg, err := newEmbeddedFallbackRegistry(nativeRegUrl)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for embedded schemas")
-	}
-	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
+		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native and embedded schemas")
 	}
 	crdsReg, err := registry.New(crdsRegUrl, "", true, false, false)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
 	}
-	registries = []registry.Registry{nativeReg, crdsReg, embeddedReg}
+	registries = []registry.Registry{embeddedReg, crdsReg}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
@@ -86,6 +71,7 @@ func GetFieldType(path []string) (FieldType, error) {
 					return Unknown, err
 				}
 			}
+
 			dat, err := json.Marshal(data)
 			if err != nil {
 				return Unknown, err
