@@ -1,8 +1,10 @@
 package fieldtype
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
@@ -10,6 +12,9 @@ import (
 	"github.com/yannh/kubeconform/pkg/loader"
 	"github.com/yannh/kubeconform/pkg/registry"
 )
+
+//go:embed master-standalone-strict
+var schemafs embed.FS
 
 type FieldType string
 
@@ -27,6 +32,7 @@ const (
 
 const (
 	// jsonschemas used by kubeconform
+	embeddedRegUrl = "http://localhost:42069/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
 	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
 	crdsRegUrl   = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
 
@@ -39,6 +45,15 @@ var (
 )
 
 func init() {
+	go func() {
+		http.Handle("/", http.FileServerFS(schemafs))
+		http.ListenAndServe(":42069", nil)
+	}()
+
+	embeddedReg, err := registry.New(embeddedRegUrl, "", true, false, false)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "warning: could not set up registry for embedded schemas")
+	}
 	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
@@ -47,7 +62,7 @@ func init() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
 	}
-	registries = []registry.Registry{nativeReg, crdsReg}
+	registries = []registry.Registry{embeddedReg, nativeReg, crdsReg}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
