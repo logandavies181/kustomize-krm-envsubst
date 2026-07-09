@@ -1,11 +1,13 @@
 package fieldtype
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/yannh/kubeconform/pkg/cache"
+	"github.com/yannh/kubeconform/pkg/loader"
 	"github.com/yannh/kubeconform/pkg/registry"
 )
 
@@ -56,24 +58,29 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	if cacheSchema, err := regCache.Get(path[1], path[0], k8sVersion); err == nil {
+	if cacheSchema, err := regCache.Get(fmt.Sprintf("%s%s%s", path[1], path[0], k8sVersion)); err == nil {
 		sch = cacheSchema.(*jsonschema.Schema)
 	} else {
 		for _, reg := range registries {
 			_, data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
 			switch err.(type) {
-			case *registry.NotFoundError:
+			case *loader.NotFoundError:
 				continue
 			default:
 				if err != nil {
 					return Unknown, err
 				}
 			}
-			sch, err = jsonschema.CompileString("", string(data))
+			dat, err := json.Marshal(data)
+			if err != nil {
+				return Unknown, err
+			}
+
+			sch, err = jsonschema.CompileString("", string(dat))
 			if err != nil {
 				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
 			}
-			if err := regCache.Set(path[1], path[0], k8sVersion, sch); err != nil {
+			if err := regCache.Set(fmt.Sprint("%s%s%s", path[1], path[0], k8sVersion), sch); err != nil {
 				return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
 			}
 		}
