@@ -62,7 +62,7 @@ func init() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
 	}
-	registries = []registry.Registry{embeddedReg, nativeReg, crdsReg}
+	registries = []registry.Registry{nativeReg, crdsReg, embeddedReg}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
