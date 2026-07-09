@@ -18,7 +18,7 @@ var schemafs embed.FS
 
 type embeddedFallbackRegistry struct {
 	reg registry.Registry
-	fs fs.FS
+	fs  fs.FS
 }
 
 func newEmbeddedFallbackRegistry(url string) (embeddedFallbackRegistry, error) {
@@ -28,7 +28,7 @@ func newEmbeddedFallbackRegistry(url string) (embeddedFallbackRegistry, error) {
 	}
 	return embeddedFallbackRegistry{
 		reg: reg,
-		fs: schemafs,
+		fs:  schemafs,
 	}, nil
 }
 
