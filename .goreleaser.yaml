@@ -3,6 +3,7 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    - ./pull-schemas.sh
 
 builds:
   - main: ./...
@@ -16,14 +17,10 @@ builds:
       - arm64
       - amd64
       - "386"
-    hooks:
-      pre:
-        - cmd: ./pull-schemas.sh
-          output: true
     tags:
       - embeddedSchemas
 
-  - id: "slim"
+  - id: "kustomize-krm-envsubst_slim"
     env:
       - CGO_ENABLED=0
     goos:
@@ -37,7 +34,6 @@ builds:
 
 archives:
   - formats: [tar.gz]
-    # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -45,7 +41,6 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
     format_overrides:
       - goos: windows
         formats: [zip]

@@ -4,6 +4,8 @@ set -o errexit
 set -o pipefail
 set -o nounset 
 
+trap 'rm -rf /tmp/kubernetes-json-schema' EXIT
+
 rm -rf fieldType/master-standalone-strict
 
 (
