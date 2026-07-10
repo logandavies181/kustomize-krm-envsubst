@@ -2,11 +2,8 @@ package fieldtype
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/santhosh-tekuri/jsonschema/v5"
-	"github.com/yannh/kubeconform/pkg/cache"
-	"github.com/yannh/kubeconform/pkg/registry"
+	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 )
 
 type FieldType string
@@ -23,29 +20,19 @@ const (
 	Null    FieldType = "null"
 )
 
-const (
-	// jsonschemas used by kubeconform
-	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
-	crdsRegUrl   = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
-
-	k8sVersion = "master"
-)
-
 var (
-	registries []registry.Registry
-	regCache   = cache.NewInMemoryCache()
+	registries []registry
+	regCache   = make(map[string]*jsonschema.Schema)
+
+	// If we have embedded files, then it's more likely that we've already checked if the
+	// resource is a native one, so check CRD registry before yannh.
+	crdsFirst = false
 )
 
 func init() {
-	nativeReg, err := registry.New(nativeRegUrl, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
-	}
-	crdsReg, err := registry.New(crdsRegUrl, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
-	}
-	registries = []registry.Registry{nativeReg, crdsReg}
+	embeddedReg := newEmbeddedRegistry(&schemafs)
+	httpReg := newHttpRegistry()
+	registries = []registry{embeddedReg, httpReg}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
@@ -56,26 +43,26 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	if cacheSchema, err := regCache.Get(path[1], path[0], k8sVersion); err == nil {
-		sch = cacheSchema.(*jsonschema.Schema)
+	cacheKey := fmt.Sprintf("%s%s", path[1], path[0])
+	if cacheSchema, ok := regCache[cacheKey]; ok {
+		sch = cacheSchema
 	} else {
 		for _, reg := range registries {
-			_, data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
+			data, err := reg.DownloadSchema(path[1], path[0])
 			switch err.(type) {
-			case *registry.NotFoundError:
+			case notFoundError:
 				continue
 			default:
 				if err != nil {
 					return Unknown, err
 				}
 			}
+
 			sch, err = jsonschema.CompileString("", string(data))
 			if err != nil {
 				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
 			}
-			if err := regCache.Set(path[1], path[0], k8sVersion, sch); err != nil {
-				return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
-			}
+			regCache[cacheKey] = sch
 		}
 	}
 

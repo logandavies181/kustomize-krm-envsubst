@@ -5,13 +5,13 @@ Kustomize. It applies envsubst as per this package: https://github.com/drone/env
 
 ## Installation
 
-Build from source:
+Check out [releases](https://github.com/logandavies181/kustomize-krm-envsubst/releases)
+
+Or build from source:
 
 ```bash
 go install github.com/logandavies181/kustomize-krm-envsubst@latest
 ```
-
-Or check out [releases](https://github.com/logandavies181/kustomize-krm-envsubst/releases)
 
 ## Usage
 
