@@ -30,13 +30,13 @@ const (
 
 var (
 	registries []registry
-	// regCache   = cache.NewInMemoryCache()
+	regCache   = make(map[string]*jsonschema.Schema)
 )
 
 func init() {
 	embeddedReg := newEmbeddedRegistry(schemafs)
-	crdsReg := httpRegistry{}
-	registries = []registry{embeddedReg, crdsReg}
+	httpReg := newHttpRegistry()
+	registries = []registry{embeddedReg, httpReg}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
@@ -47,9 +47,10 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	// if cacheSchema, err := regCache.Get(fmt.Sprintf("%s%s%s", path[1], path[0], k8sVersion)); err == nil {
-	// 	sch = cacheSchema.(*jsonschema.Schema)
-	// } else {
+	cacheKey := fmt.Sprintf("%s%s%s", path[1], path[0], k8sVersion)
+	if cacheSchema, ok := regCache[cacheKey]; ok {
+		sch = cacheSchema
+	} else {
 		for _, reg := range registries {
 			data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
 			switch err.(type) {
@@ -65,11 +66,9 @@ func GetFieldType(path []string) (FieldType, error) {
 			if err != nil {
 				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
 			}
-			// if err := regCache.Set(fmt.Sprint("%s%s%s", path[1], path[0], k8sVersion), sch); err != nil {
-			// 	return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
-			// }
+			regCache[cacheKey] = sch
 		}
-	// }
+	}
 
 	return walk(sch, path[2:]), nil
 }

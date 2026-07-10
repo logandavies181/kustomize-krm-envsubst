@@ -15,10 +15,6 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/fn/framework/command"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
-
-	"log"
-	"runtime"
-	"runtime/pprof"
 )
 
 var version string // goreleaser will set this
@@ -204,13 +200,6 @@ func (c Config) Filter(in *yaml.RNode) (*yaml.RNode, error) {
 
 		return in, nil
 	case yaml.ScalarNode:
-		// start := time.Now()
-		// ret, err := c.processScalarNode(in)
-		// taken := time.Now().Sub(start)
-		// if taken > 100 * time.Millisecond {
-		// 	fmt.Fprintln(os.Stderr, in.FieldPath())
-		// }
-		// return ret, err
 		return c.processScalarNode(in)
 	case yaml.AliasNode, yaml.DocumentNode:
 		fallthrough
@@ -260,18 +249,6 @@ func (c Config) shouldMap(varName string) bool {
 }
 
 func main() {
-	fMem, err := os.Create("mem.prof")
-	if err != nil {
-	    log.Fatalf("could not create memory profile: %v", err)
-	}
-	defer fMem.Close()
-
-	// Write the snapshot of memory allocations
-	runtime.GC() // get up-to-date statistics
-	if err := pprof.WriteHeapProfile(fMem); err != nil {
-	    log.Fatalf("could not write memory profile: %v", err)
-	}
-
 	config := new(Config)
 
 	// This is a hack, but legacy exec plugins get config from the first arg.
