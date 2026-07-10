@@ -9,6 +9,20 @@ builds:
       - linux
       - windows
       - darwin
+    hooks:
+      pre:
+        - cmd: ./pull-schemas.sh
+          output: true
+          fail_on_error: true
+    tags:
+      - embeddedSchemas
+  - id: "slim"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
 
 archives:
   - format: tar.gz

@@ -19,12 +19,12 @@ func newEmbeddedRegistry(fs fs.FS) embeddedRegistry {
 	}
 }
 
-func (er embeddedRegistry) DownloadSchema(kind, apiVersion, k8sVersion string) ([]byte, error) {
+func (er embeddedRegistry) DownloadSchema(kind, apiVersion string) ([]byte, error) {
 	if kind == "" {
 		return nil, newNotFoundError(fmt.Errorf("No kind supplied"))
 	}
 
-	fname := yannhFname(kind, apiVersion, k8sVersion)
+	fname := yannhFname(kind, apiVersion)
 
 	f, err := er.fs.Open(fname)
 	if err != nil {

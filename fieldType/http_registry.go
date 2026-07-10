@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type httpRegistry struct {
@@ -17,13 +18,24 @@ func newHttpRegistry() httpRegistry {
 	}
 }
 
-func (hr httpRegistry) DownloadSchema(kind, apiVersion, k8sVersion string) ([]byte, error) {
+func datreeFname(kind, apiVersion string) string {
+	parts := strings.Split(apiVersion, "/")
+	if len(parts) != 2 {
+		return ""
+	}
+
+	return strings.ToLower(
+		fmt.Sprintf("%s/%s_%s.json", parts[0], kind, parts[1]),
+	)
+}
+
+func (hr httpRegistry) DownloadSchema(kind, apiVersion string) ([]byte, error) {
 	nativeRegUrlBase := "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master"
-	// crdsRegUrlBase := "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+	crdsRegUrlBase := "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main"
 
 	for _, v := range []string {
-		fmt.Sprintf("%s/%s", nativeRegUrlBase, yannhFname(kind, apiVersion, k8sVersion)),
-		// fmt.Sprintf("%s/%s", nativeRegUrlBase, yannhFname(kind, apiVersion, k8sVersion)),
+		fmt.Sprintf("%s/%s", nativeRegUrlBase, yannhFname(kind, apiVersion)),
+		fmt.Sprintf("%s/%s", crdsRegUrlBase, datreeFname(kind, apiVersion)),
 	} {
 		data, err := hr.downloadSchema(v)
 		if err == nil {

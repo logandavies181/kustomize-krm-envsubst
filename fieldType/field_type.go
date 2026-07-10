@@ -20,14 +20,6 @@ const (
 	Null    FieldType = "null"
 )
 
-const (
-	// jsonschemas used by kubeconform
-	nativeRegUrl = "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone{{.StrictSuffix}}/{{.ResourceKind}}{{.KindSuffix}}.json"
-	crdsRegUrl   = "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
-
-	k8sVersion = "master"
-)
-
 var (
 	registries []registry
 	regCache   = make(map[string]*jsonschema.Schema)
@@ -47,12 +39,12 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	cacheKey := fmt.Sprintf("%s%s%s", path[1], path[0], k8sVersion)
+	cacheKey := fmt.Sprintf("%s%s", path[1], path[0])
 	if cacheSchema, ok := regCache[cacheKey]; ok {
 		sch = cacheSchema
 	} else {
 		for _, reg := range registries {
-			data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
+			data, err := reg.DownloadSchema(path[1], path[0])
 			switch err.(type) {
 			case notFoundError:
 				continue

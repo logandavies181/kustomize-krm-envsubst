@@ -1,3 +1,5 @@
+//go:build embeddedSchemas
+
 package fieldtype
 
 import (
