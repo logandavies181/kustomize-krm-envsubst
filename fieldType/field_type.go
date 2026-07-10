@@ -23,6 +23,10 @@ const (
 var (
 	registries []registry
 	regCache   = make(map[string]*jsonschema.Schema)
+
+	// If we have embedded files, then it's more likely that we've already checked if the
+	// resource is a native one, so check CRD registry before yannh.
+	crdsFirst = false
 )
 
 func init() {

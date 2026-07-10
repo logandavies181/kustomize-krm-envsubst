@@ -10,7 +10,7 @@ import (
 var schemafs embed.FS
 
 type embeddedRegistry struct {
-	fs  fs.FS
+	fs fs.FS
 }
 
 func newEmbeddedRegistry(fs fs.FS) embeddedRegistry {

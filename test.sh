@@ -12,7 +12,7 @@ else
 fi
 
 echo "Compiling"
-go build
+go build -tags embeddedSchemas
 
 # Set some env vars used in the test kustomization
 export PORT=58008

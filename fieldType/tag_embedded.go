@@ -11,4 +11,5 @@ var _schemafs embed.FS
 
 func init() {
 	schemafs = _schemafs
+	crdsFirst = true
 }

@@ -33,10 +33,17 @@ func (hr httpRegistry) DownloadSchema(kind, apiVersion string) ([]byte, error) {
 	nativeRegUrlBase := "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master"
 	crdsRegUrlBase := "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main"
 
-	for _, v := range []string {
-		fmt.Sprintf("%s/%s", nativeRegUrlBase, yannhFname(kind, apiVersion)),
-		fmt.Sprintf("%s/%s", crdsRegUrlBase, datreeFname(kind, apiVersion)),
-	} {
+	yannhTarget := fmt.Sprintf("%s/%s", nativeRegUrlBase, yannhFname(kind, apiVersion))
+	datreeTarget := fmt.Sprintf("%s/%s", crdsRegUrlBase, datreeFname(kind, apiVersion))
+
+	var targets []string
+	if crdsFirst {
+		targets = []string{datreeTarget, yannhTarget}
+	} else {
+		targets = []string{yannhTarget, datreeTarget}
+	}
+
+	for _, v := range targets {
 		data, err := hr.downloadSchema(v)
 		if err == nil {
 			return data, nil
