@@ -21,6 +21,7 @@ builds:
       - embeddedSchemas
 
   - id: "kustomize-krm-envsubst_slim"
+    binary: "kustomize-krm-envsubst_slim"
     env:
       - CGO_ENABLED=0
     goos:
