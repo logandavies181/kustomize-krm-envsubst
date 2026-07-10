@@ -3,56 +3,34 @@ package fieldtype
 import (
 	"embed"
 	"fmt"
+	"io"
 	"io/fs"
-	"os"
-	"strings"
-
-	jsonschema6 "github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/yannh/kubeconform/pkg/loader"
-	"github.com/yannh/kubeconform/pkg/registry"
 )
 
 var schemafs embed.FS
 
-type embeddedFallbackRegistry struct {
-	reg registry.Registry
+type embeddedRegistry struct {
 	fs  fs.FS
 }
 
-func newEmbeddedFallbackRegistry(url string) (embeddedFallbackRegistry, error) {
-	reg, err := registry.New(url, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native schemas")
+func newEmbeddedRegistry(fs fs.FS) embeddedRegistry {
+	return embeddedRegistry{
+		fs: fs,
 	}
-	return embeddedFallbackRegistry{
-		reg: reg,
-		fs:  schemafs,
-	}, nil
 }
 
-func (er embeddedFallbackRegistry) DownloadSchema(kind, apiVersion, k8sVersion string) (string, any, error) {
+func (er embeddedRegistry) DownloadSchema(kind, apiVersion, k8sVersion string) ([]byte, error) {
 	if kind == "" {
-		return "", nil, loader.NewNotFoundError(fmt.Errorf("No kind supplied"))
+		return nil, newNotFoundError(fmt.Errorf("No kind supplied"))
 	}
 
-	parts := []string{
-		kind,
-	}
-	if apiVersion != "" {
-		parts = append(parts, strings.ReplaceAll(apiVersion, "/", "-"))
-	}
-	fname := strings.ToLower(
-		fmt.Sprintf(
-			"master-standalone-stric/%s.json",
-			strings.Join(parts, "-"),
-		),
-	)
+	fname := yannhFname(kind, apiVersion, k8sVersion)
 
 	f, err := er.fs.Open(fname)
-	if err == nil {
-		schema, err := jsonschema6.UnmarshalJSON(f)
-		return fname, schema, err
+	if err != nil {
+		return nil, newNotFoundError(fmt.Errorf("not found in embedded registry"))
 	}
+	defer f.Close()
 
-	return er.reg.DownloadSchema(kind, apiVersion, k8sVersion)
+	return io.ReadAll(f)
 }

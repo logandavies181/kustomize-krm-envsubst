@@ -1,14 +1,9 @@
 package fieldtype
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
-	"github.com/yannh/kubeconform/pkg/cache"
-	"github.com/yannh/kubeconform/pkg/loader"
-	"github.com/yannh/kubeconform/pkg/registry"
 )
 
 type FieldType string
@@ -34,20 +29,14 @@ const (
 )
 
 var (
-	registries []registry.Registry
-	regCache   = cache.NewInMemoryCache()
+	registries []registry
+	// regCache   = cache.NewInMemoryCache()
 )
 
 func init() {
-	embeddedReg, err := newEmbeddedFallbackRegistry(nativeRegUrl)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for native and embedded schemas")
-	}
-	crdsReg, err := registry.New(crdsRegUrl, "", true, false, false)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: could not set up registry for CRD schemas")
-	}
-	registries = []registry.Registry{embeddedReg, crdsReg}
+	embeddedReg := newEmbeddedRegistry(schemafs)
+	crdsReg := httpRegistry{}
+	registries = []registry{embeddedReg, crdsReg}
 }
 
 func GetFieldType(path []string) (FieldType, error) {
@@ -58,13 +47,13 @@ func GetFieldType(path []string) (FieldType, error) {
 	var sch *jsonschema.Schema
 
 	// try cache first
-	if cacheSchema, err := regCache.Get(fmt.Sprintf("%s%s%s", path[1], path[0], k8sVersion)); err == nil {
-		sch = cacheSchema.(*jsonschema.Schema)
-	} else {
+	// if cacheSchema, err := regCache.Get(fmt.Sprintf("%s%s%s", path[1], path[0], k8sVersion)); err == nil {
+	// 	sch = cacheSchema.(*jsonschema.Schema)
+	// } else {
 		for _, reg := range registries {
-			_, data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
+			data, err := reg.DownloadSchema(path[1], path[0], k8sVersion)
 			switch err.(type) {
-			case *loader.NotFoundError:
+			case notFoundError:
 				continue
 			default:
 				if err != nil {
@@ -72,20 +61,15 @@ func GetFieldType(path []string) (FieldType, error) {
 				}
 			}
 
-			dat, err := json.Marshal(data)
-			if err != nil {
-				return Unknown, err
-			}
-
-			sch, err = jsonschema.CompileString("", string(dat))
+			sch, err = jsonschema.CompileString("", string(data))
 			if err != nil {
 				return Unknown, fmt.Errorf("Could not parse schema: %w", err)
 			}
-			if err := regCache.Set(fmt.Sprint("%s%s%s", path[1], path[0], k8sVersion), sch); err != nil {
-				return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
-			}
+			// if err := regCache.Set(fmt.Sprint("%s%s%s", path[1], path[0], k8sVersion), sch); err != nil {
+			// 	return Unknown, fmt.Errorf("failed writing schema to cache: %w", err)
+			// }
 		}
-	}
+	// }
 
 	return walk(sch, path[2:]), nil
 }
