@@ -4,16 +4,14 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"net/url"
 	"os"
-	"path"
+	"strings"
 
 	jsonschema6 "github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/yannh/kubeconform/pkg/loader"
 	"github.com/yannh/kubeconform/pkg/registry"
 )
 
-//go:embed master-standalone-strict
 var schemafs embed.FS
 
 type embeddedFallbackRegistry struct {
@@ -33,23 +31,28 @@ func newEmbeddedFallbackRegistry(url string) (embeddedFallbackRegistry, error) {
 }
 
 func (er embeddedFallbackRegistry) DownloadSchema(kind, apiVersion, k8sVersion string) (string, any, error) {
-	urlString, schema, wrappedErr := er.reg.DownloadSchema(kind, apiVersion, k8sVersion)
-	switch wrappedErr.(type) {
-	case *loader.NotFoundError:
-		u, err := url.Parse(urlString)
-		if err != nil {
-			return urlString, nil, err
-		}
-
-		_, fname := path.Split(u.Path)
-		f, err := er.fs.Open(fname)
-		if err != nil {
-			return urlString, nil, wrappedErr
-		}
-
-		schema, err := jsonschema6.UnmarshalJSON(f)
-		return urlString, schema, err
-	default:
-		return urlString, schema, wrappedErr
+	if kind == "" {
+		return "", nil, loader.NewNotFoundError(fmt.Errorf("No kind supplied"))
 	}
+
+	parts := []string{
+		kind,
+	}
+	if apiVersion != "" {
+		parts = append(parts, strings.ReplaceAll(apiVersion, "/", "-"))
+	}
+	fname := strings.ToLower(
+		fmt.Sprintf(
+			"master-standalone-stric/%s.json",
+			strings.Join(parts, "-"),
+		),
+	)
+
+	f, err := er.fs.Open(fname)
+	if err == nil {
+		schema, err := jsonschema6.UnmarshalJSON(f)
+		return fname, schema, err
+	}
+
+	return er.reg.DownloadSchema(kind, apiVersion, k8sVersion)
 }
