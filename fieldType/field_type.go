@@ -30,7 +30,7 @@ var (
 )
 
 func init() {
-	embeddedReg := newEmbeddedRegistry(schemafs)
+	embeddedReg := newEmbeddedRegistry(&schemafs)
 	httpReg := newHttpRegistry()
 	registries = []registry{embeddedReg, httpReg}
 }
