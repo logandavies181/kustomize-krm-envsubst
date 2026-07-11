@@ -31,3 +31,14 @@ func yannhFname(kind, apiVersion string) string {
 		),
 	)
 }
+
+func datreeFname(kind, apiVersion string) string {
+	parts := strings.Split(apiVersion, "/")
+	if len(parts) != 2 {
+		return ""
+	}
+
+	return strings.ToLower(
+		fmt.Sprintf("%s/%s_%s.json", parts[0], kind, parts[1]),
+	)
+}

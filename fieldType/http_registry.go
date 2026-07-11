@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type httpRegistry struct {
@@ -16,17 +15,6 @@ func newHttpRegistry() httpRegistry {
 	return httpRegistry{
 		client: http.Client{},
 	}
-}
-
-func datreeFname(kind, apiVersion string) string {
-	parts := strings.Split(apiVersion, "/")
-	if len(parts) != 2 {
-		return ""
-	}
-
-	return strings.ToLower(
-		fmt.Sprintf("%s/%s_%s.json", parts[0], kind, parts[1]),
-	)
 }
 
 func (hr httpRegistry) DownloadSchema(kind, apiVersion string) ([]byte, error) {
@@ -45,14 +33,21 @@ func (hr httpRegistry) DownloadSchema(kind, apiVersion string) ([]byte, error) {
 
 	for _, v := range targets {
 		data, err := hr.downloadSchema(v)
-		if err == nil {
+		switch err.(type) {
+		case notFoundError:
+			continue
+		case nil:
 			return data, nil
+		default:
+			return nil, err
 		}
 	}
 
 	return nil, newNotFoundError(fmt.Errorf("couldn't find resource from http registries"))
 }
 
+// The following is modified from yannh/kubeconform.
+//   - We return the raw []byte rather than unmarshalling.
 func (hr httpRegistry) downloadSchema(url string) ([]byte, error) {
 	resp, err := hr.client.Get(url)
 	if err != nil {
